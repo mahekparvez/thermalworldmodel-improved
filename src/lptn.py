@@ -253,6 +253,102 @@ class ThermalNetwork:
         b = P / self.C
         return A, b
 
+    def system_batch(self, i_d, i_q, speed_rpm, coolant_C, ambient_C,
+                     flow_kg_s=None):
+        """Vectorised (A, b) for a whole trajectory at once.
+
+        Same maths as `system()`, but over arrays. Built because the
+        identification inner loop calls this tens of thousands of times per
+        objective evaluation, and a Python loop over timesteps made the fit
+        ~100x slower than it needed to be.
+        """
+        i_d = np.asarray(i_d, float); i_q = np.asarray(i_q, float)
+        spd = np.asarray(speed_rpm, float)
+        cool = np.asarray(coolant_C, float); amb = np.asarray(ambient_C, float)
+        n = i_d.shape[0]
+        flow = np.full(n, self.nominal_flow) if flow_kg_s is None \
+            else np.asarray(flow_kg_s, float)
+
+        omega = np.abs(spd) * 2.0 * math.pi / 60.0
+        f_e = np.abs(self.pole_pairs * spd / 60.0)
+
+        # --- resistances (two are functions of the operating point) ---
+        r_wy = self.p("resistances.winding_to_yoke")
+        r_yh = self.p("resistances.yoke_to_housing")
+        r_ms = self.p("resistances.magnet_to_housing_shaft")
+        r_ha = self.p("resistances.housing_to_ambient")
+        for nm, v in (("winding_to_yoke", r_wy), ("yoke_to_housing", r_yh),
+                      ("magnet_to_housing_shaft", r_ms),
+                      ("housing_to_ambient", r_ha)):
+            if not (v > 0):
+                raise ValueError(f"resistance '{nm}' is {v}; must be > 0 (2nd law)")
+
+        ta = (omega ** 2) * self.r_mean * (self.gap ** 3) / (self.nu_air ** 2)
+        ratio = np.where(ta < 1700.0, 1.0,
+                 np.where(ta < 1.0e4, 0.128 * np.maximum(ta, 1e-30) ** 0.367,
+                                      0.409 * np.maximum(ta, 1e-30) ** 0.241))
+        r_gap0 = self.p("resistances.magnet_to_winding_airgap")
+        if not (r_gap0 > 0):
+            raise ValueError("air-gap resistance must be > 0 (2nd law)")
+        r_gap = r_gap0 / ratio
+
+        r_hc0 = self.p("resistances.housing_to_coolant")
+        if not (r_hc0 > 0):
+            raise ValueError("coolant resistance must be > 0 (2nd law)")
+        r_hc = r_hc0 * (self.nominal_flow / np.maximum(flow, 1e-6)) ** 0.8
+
+        # --- losses ---
+        B = self.p("losses.iron.flux_density_T")
+        n_st = self.p("losses.iron.steinmetz_exponent")
+        k_h = self.p("losses.iron.hysteresis_coefficient")
+        k_e = self.p("losses.iron.eddy_coefficient")
+        p_iron = self.steel_mass * (k_h * f_e * B ** n_st + k_e * f_e ** 2 * B ** 2)
+        k_pm = self.p("losses.magnet_eddy.coefficient")
+        p_pm = self.magnet_mass * k_pm * f_e ** 2 * B ** 2
+        tau_b = self.p("losses.mechanical.bearing_friction_torque")
+        k_w = self.p("losses.mechanical.windage_coefficient")
+        p_bear = tau_b * omega
+        p_wind = k_w * omega ** 3
+
+        r20 = self.p("losses.copper.phase_resistance_20C")
+        fac = self.p("losses.copper.dq_to_three_phase_factor")
+        k_ac = self.p("losses.copper.ac_excess_coefficient")
+        r_eff_cu = r20 * (1.0 + k_ac * (f_e / 100.0) ** 2)
+        i_sq = i_d ** 2 + i_q ** 2
+        base = fac * r_eff_cu * i_sq
+        p_cu_const = base * (1.0 - self.alpha * self.T_ref)
+        k_cu = base * self.alpha
+
+        # --- assemble ---
+        A = np.zeros((n, N, N))
+        P = np.zeros((n, N))
+        iw, iy, im, ih = IDX["winding"], IDX["yoke"], IDX["magnet"], IDX["housing"]
+
+        def link(a, b, res):
+            g = 1.0 / res
+            A[:, a, b] += g; A[:, b, a] += g
+            A[:, a, a] -= g; A[:, b, b] -= g
+
+        link(iw, iy, r_wy)
+        link(iy, ih, r_yh)
+        link(im, iw, r_gap)
+        link(im, ih, r_ms)
+
+        P[:, iy] += p_iron
+        P[:, im] += p_pm + p_wind
+        P[:, ih] += p_bear
+        P[:, iw] += p_cu_const
+
+        g_cool = 1.0 / r_hc
+        g_amb = 1.0 / r_ha
+        A[:, ih, ih] -= (g_cool + g_amb)
+        P[:, ih] += g_cool * cool + g_amb * amb
+        A[:, iw, iw] += k_cu
+
+        A /= self.C[None, :, None]
+        b = P / self.C[None, :]
+        return A, b
+
     def conductance_matrix(self, u: Inputs) -> np.ndarray:
         """Passive conductance only (no copper feedback). Must be symmetric."""
         r = self.resistances(u)

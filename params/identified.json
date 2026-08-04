@@ -1,0 +1,184 @@
+{
+  "fitted": {
+    "materials.slot_insulation.conductivity": 0.22,
+    "resistances.winding_to_yoke": 0.0449642685775443,
+    "resistances.yoke_to_housing": 0.010916221879525395,
+    "resistances.magnet_to_winding_airgap": 2.055038206489056,
+    "resistances.magnet_to_housing_shaft": 0.8000000026357136,
+    "resistances.housing_to_coolant": 0.01395444959367255,
+    "resistances.housing_to_ambient": 0.20000000000000237,
+    "losses.copper.phase_resistance_20C": 0.00864119460082194,
+    "losses.copper.ac_excess_coefficient": 0.10793999603705269,
+    "losses.iron.hysteresis_coefficient": 0.04999999998572025,
+    "losses.iron.eddy_coefficient": 8.027615869275959e-05,
+    "losses.magnet_eddy.coefficient": 1.994931035296475e-05,
+    "losses.mechanical.bearing_friction_torque": 0.3499999997917749,
+    "losses.mechanical.windage_coefficient": 2.4483291344980163e-07
+  },
+  "info": {
+    "n_eval": 931,
+    "seconds": 273.4,
+    "final_rmse_K": 5.17996570830682,
+    "status": 2,
+    "message": "`ftol` termination condition is satisfied."
+  },
+  "pinned_at_bound": [
+    "resistances.magnet_to_housing_shaft: pinned at LOWER bound 0.8 (fitted 0.8)",
+    "resistances.housing_to_ambient: pinned at LOWER bound 0.2 (fitted 0.2)",
+    "losses.iron.hysteresis_coefficient: pinned at UPPER bound 0.05 (fitted 0.05)",
+    "losses.mechanical.bearing_friction_torque: pinned at UPPER bound 0.35 (fitted 0.35)"
+  ],
+  "fit_error": {
+    "winding": {
+      "mae_K": 3.7409406088050137,
+      "rmse_K": 4.788533498087363,
+      "max_K": 26.196383399441572,
+      "bias_K": -1.733988452871292
+    },
+    "yoke": {
+      "mae_K": 2.142585867813686,
+      "rmse_K": 2.7863065072989475,
+      "max_K": 14.691606780493075,
+      "bias_K": -0.2702257599109032
+    },
+    "magnet": {
+      "mae_K": 5.642435646297623,
+      "rmse_K": 7.057094104713529,
+      "max_K": 18.77498462102085,
+      "bias_K": -0.8817112227820981
+    },
+    "ALL": {
+      "mae_K": 3.8419873743054413,
+      "rmse_K": 5.179965708306819,
+      "max_K": 26.196383399441572,
+      "bias_K": -0.9619751451880979
+    }
+  },
+  "heldout_error": {
+    "winding": {
+      "mae_K": 3.379795815260538,
+      "rmse_K": 4.6045374384439794,
+      "max_K": 26.227304504561744,
+      "bias_K": -2.005940606310821
+    },
+    "yoke": {
+      "mae_K": 1.876120726869782,
+      "rmse_K": 2.4970842695271003,
+      "max_K": 11.390565749914856,
+      "bias_K": -0.41727956262862254
+    },
+    "magnet": {
+      "mae_K": 4.304832490873845,
+      "rmse_K": 5.5346110134746835,
+      "max_K": 17.9766855848531,
+      "bias_K": -0.6350870268124146
+    },
+    "ALL": {
+      "mae_K": 3.186916344334722,
+      "rmse_K": 4.3995876299803065,
+      "max_K": 26.227304504561744,
+      "bias_K": -1.0194357319172862
+    }
+  },
+  "heldout_horizon_error": {
+    "1": {
+      "winding": 0.3221663221916875,
+      "yoke": 0.47944096025063204,
+      "magnet": 0.09985863074823832,
+      "ALL": 0.30048863773018597
+    },
+    "10": {
+      "winding": 2.482993037677008,
+      "yoke": 2.119529144266751,
+      "magnet": 0.6199823839687789,
+      "ALL": 1.740834855304179
+    },
+    "100": {
+      "winding": 3.5626584523711537,
+      "yoke": 2.0507141136902063,
+      "magnet": 3.0612490873231137,
+      "ALL": 2.891540551128158
+    },
+    "700": {
+      "winding": 3.079431516755834,
+      "yoke": 1.7075559252278019,
+      "magnet": 5.481612129760262,
+      "ALL": 3.4228665239146325
+    }
+  },
+  "n_fit_windows": 48,
+  "n_heldout_windows": 58,
+  "fit_profiles": [
+    2,
+    3,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    23,
+    24,
+    26,
+    27,
+    29,
+    31,
+    41,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    51,
+    54,
+    55,
+    56,
+    57,
+    58,
+    59,
+    61,
+    62,
+    63,
+    64,
+    66,
+    67,
+    68,
+    69,
+    70,
+    71,
+    73,
+    74,
+    75,
+    76,
+    78,
+    79,
+    80
+  ],
+  "test_profiles": [
+    4,
+    5,
+    30,
+    32,
+    36,
+    42,
+    43,
+    50,
+    52,
+    53,
+    60,
+    65,
+    72,
+    81
+  ]
+}

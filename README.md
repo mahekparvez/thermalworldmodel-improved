@@ -6,9 +6,10 @@ against multi-step rollouts rather than single steps, and the result is validate
 against **real test-bench measurements** — not against the simulator that
 generated its own training data.
 
-> **Status: in progress.** Steps 1–3 of 7 complete. The simulator runs and both
-> the analytical and physics gates pass (17/17 checks). Nothing is trained yet,
-> and the reality gate has not been run. See [Build order](#build-order).
+> **Status: complete.** All three gates pass. Both models validated on 14
+> profiles never seen during fitting or training: **fitted LPTN 3.19 K MAE,
+> learned TNN 3.11 K MAE**, free-running over a full hour.
+> See **[REPORT.md](REPORT.md)** for the side-by-side and the limitations.
 
 ---
 
@@ -107,10 +108,14 @@ Each step is reviewed before the next begins.
 | 1 | Physics derivation | `docs/PHYSICS.md` | **done** |
 | 2 | Sourced parameters | `params/thermal_params.yaml`, `src/params.py` | **done** |
 | 3 | LPTN simulator + analytical & physics gates | `src/lptn.py`, `tests/test_gates.py` | **done** |
-| 4 | Domain-randomized data generation | `src/generate.py` | pending |
-| 5 | Rollout training loop with error correction | `src/train.py` | pending |
-| 6 | Paderborn fitting + held-out validation | `src/identify.py` | pending |
-| 7 | Honest reporting | `REPORT.md` | pending |
+| 4 | Data pipeline, profile-level split | `src/data.py`, `params/data_split.json` | **done** |
+| 5 | Rollout training with drift penalty | `src/tnn.py`, `src/train.py` | **done** |
+| 6 | Paderborn fitting + held-out validation | `src/identify.py` | **done** |
+| 7 | Honest reporting | [`REPORT.md`](REPORT.md) | **done** |
+
+Step 4 became a data pipeline rather than a synthetic generator. Training a
+network on rollouts of my own RC model would have rebuilt the circle this repo
+exists to remove; the TNN is trained on the measured data instead.
 
 Deliberately not written first: the training loop. A learned model on top of an
 unsourced simulator inherits every error in it and adds its own.
@@ -142,11 +147,32 @@ windage into the housing and bearings.
 
 ---
 
+## Result
+
+Held-out profiles, free-running, in Kelvin:
+
+| Node | LPTN (14 params) | TNN (2,631 params) |
+|---|---|---|
+| Winding | 3.38 | **2.62** |
+| Yoke | **1.88** | 2.27 |
+| Magnet | **4.30** | 4.44 |
+| **All** | 3.19 | **3.11** |
+
+**188× more parameters bought 2.5%.** The fitted four-node LPTN is within a
+tenth of a Kelvin of the neural network overall, and beats it on RMSE. The TNN
+wins where it was designed to: the winding (−22%) and the 58-minute horizon
+(−15%). Four parameters pinned at their bounds say the structure is still
+imperfect — most likely the unsourced pole-pair count. Details in
+[REPORT.md](REPORT.md).
+
 ## Documents
 
 - [`docs/PHYSICS.md`](docs/PHYSICS.md) — first-principles derivation of every
   loss mechanism and heat path, the governing balance, and what a lumped model
   structurally cannot capture.
+- [`REPORT.md`](REPORT.md) — sourced parameters vs fitted values, all three
+  gates, per-node error at every horizon, errors found during the build, and
+  limitations.
 
 ---
 

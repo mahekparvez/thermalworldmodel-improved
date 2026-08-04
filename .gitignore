@@ -12,3 +12,6 @@ kaggle.json
 *.token
 .env
 secrets/
+
+.venv/
+params/tnn.pt
