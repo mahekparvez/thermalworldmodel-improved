@@ -6,8 +6,9 @@ against multi-step rollouts rather than single steps, and the result is validate
 against **real test-bench measurements** — not against the simulator that
 generated its own training data.
 
-> **Status: in progress.** Step 1 of 7 complete (`docs/PHYSICS.md`). Nothing is
-> trained or validated yet. See [Build order](#build-order).
+> **Status: in progress.** Steps 1–3 of 7 complete. The simulator runs and both
+> the analytical and physics gates pass (17/17 checks). Nothing is trained yet,
+> and the reality gate has not been run. See [Build order](#build-order).
 
 ---
 
@@ -104,8 +105,8 @@ Each step is reviewed before the next begins.
 | # | Step | Output | State |
 |---|---|---|---|
 | 1 | Physics derivation | `docs/PHYSICS.md` | **done** |
-| 2 | Sourced parameters | `params/thermal_params.yaml` | pending |
-| 3 | LPTN simulator + analytical & physics gates | `src/lptn.py`, `tests/` | pending |
+| 2 | Sourced parameters | `params/thermal_params.yaml`, `src/params.py` | **done** |
+| 3 | LPTN simulator + analytical & physics gates | `src/lptn.py`, `tests/test_gates.py` | **done** |
 | 4 | Domain-randomized data generation | `src/generate.py` | pending |
 | 5 | Rollout training loop with error correction | `src/train.py` | pending |
 | 6 | Paderborn fitting + held-out validation | `src/identify.py` | pending |
@@ -159,7 +160,11 @@ Fitting uses a subset of profile IDs; **entire profile IDs are held out** for
 testing. Splitting by timestep would leak, because adjacent samples at 2 Hz are
 nearly identical.
 
-Not yet downloaded — see the questions at the end of the build log.
+Downloaded and inspected: **1,330,816 rows, 69 profiles, 184.8 h, no nulls**, in
+real physical units (`measures_v2.csv`). The profile split is fixed and recorded
+in [`params/data_split.json`](params/data_split.json): **55 fit / 14 held out**
+(146.6 h / 38.3 h), stratified by profile length so the held-out set is not
+biased toward short runs.
 
 ---
 

@@ -1,0 +1,369 @@
+# =============================================================================
+# Lumped-parameter thermal network — sourced parameters
+# =============================================================================
+#
+# Every entry carries:
+#   value            the nominal figure used by the simulator
+#   units
+#   source           where it comes from. One of:
+#                      MATERIAL   published material property (fixed, not fitted)
+#                      GEOMETRY   computed from assumed geometry (see geometry:)
+#                      CORRELATION standard heat-transfer correlation
+#                      ESTIMATED  engineering estimate, NOT sourced -> must be fitted
+#                      DATA_PRIOR derived from the FIT split of the measured
+#                                 dataset only (never the held-out profiles).
+#                                 A starting point for identification, NOT a fit.
+#                      PHYSICAL   exact physical constant
+#   plausible_range  [lo, hi] for domain randomisation and as a hard bound
+#                    during parameter identification
+#   fit              true  -> handed to the optimiser in step 6
+#                    false -> FIXED. Known material properties are never fitted;
+#                             letting an optimiser adjust a published constant to
+#                             improve a residual destroys the only ground truth
+#                             in the model.
+#   sampling         loguniform for resistances (they span decades),
+#                    uniform for capacitances
+#
+# The machine is a prototype PMSM comparable to the Paderborn LEA test bench
+# (~52 kW peak, water-jacket cooled). Geometry below is ASSUMED at that scale and
+# is documented so the numbers are reproducible, not so they are believed.
+#
+# NOTHING HERE IS FITTED YET. These are priors. Step 6 replaces the `fit: true`
+# entries with identified values and reports which ones landed outside their
+# plausible_range — a parameter that had to go physically implausible to fit the
+# data means the model STRUCTURE is wrong, not the parameter.
+# =============================================================================
+
+meta:
+  machine: "Prototype PMSM, Paderborn LEA test-bench class"
+  rated_power_kw: 52.0          # ESTIMATED from the dataset description
+  pole_pairs: 3                 # UNSOURCED — not published with the dataset.
+                                # Only affects electrical frequency f = p*n/60,
+                                # which enters iron loss. Flagged in REPORT.md.
+  cooling: "water jacket in the housing"
+  nodes: [winding, yoke, magnet, housing]
+  boundaries: [coolant, ambient]
+
+# -----------------------------------------------------------------------------
+# Physical constants — exact, never fitted, never randomised
+# -----------------------------------------------------------------------------
+constants:
+  alpha_copper:
+    value: 3.93e-3
+    units: "1/K"
+    source: PHYSICAL
+    reference: "Temperature coefficient of resistance, annealed copper at 20 C. Bergman et al., Fundamentals of Heat and Mass Transfer."
+    fit: false
+  T_ref_copper:
+    value: 20.0
+    units: "degC"
+    source: PHYSICAL
+    fit: false
+  stefan_boltzmann:
+    value: 5.670374419e-8
+    units: "W/(m^2 K^4)"
+    source: PHYSICAL
+    fit: false
+
+# -----------------------------------------------------------------------------
+# Material properties — published, fixed
+# Ranges reflect grade and temperature dependence, not uncertainty about physics.
+# -----------------------------------------------------------------------------
+materials:
+  copper:
+    specific_heat: {value: 385.0, units: "J/(kg K)", plausible_range: [380.0, 390.0], source: MATERIAL, fit: false}
+    density:       {value: 8960.0, units: "kg/m^3", plausible_range: [8930.0, 8960.0], source: MATERIAL, fit: false}
+    conductivity:  {value: 400.0, units: "W/(m K)", plausible_range: [385.0, 401.0], source: MATERIAL, fit: false}
+    resistivity_20C: {value: 1.68e-8, units: "ohm m", source: MATERIAL, fit: false}
+    reference: "Bergman, Incropera, DeWitt, Lavine — Fundamentals of Heat and Mass Transfer, Table A.1."
+
+  electrical_steel:
+    # M-19 / M-235-35A class non-oriented silicon steel
+    specific_heat: {value: 460.0, units: "J/(kg K)", plausible_range: [440.0, 490.0], source: MATERIAL, fit: false}
+    density:       {value: 7650.0, units: "kg/m^3", plausible_range: [7600.0, 7750.0], source: MATERIAL, fit: false}
+    conductivity_inplane:  {value: 30.0, units: "W/(m K)", plausible_range: [22.0, 40.0], source: MATERIAL, fit: false}
+    conductivity_through_stack: {value: 2.0, units: "W/(m K)", plausible_range: [1.0, 5.0], source: MATERIAL, fit: false}
+    reference: "Non-oriented Si-steel. Through-stack value is ~an order of magnitude lower because of interlaminar insulation — see PHYSICS.md section 8."
+
+  ndfeb:
+    specific_heat: {value: 440.0, units: "J/(kg K)", plausible_range: [420.0, 460.0], source: MATERIAL, fit: false}
+    density:       {value: 7500.0, units: "kg/m^3", plausible_range: [7400.0, 7600.0], source: MATERIAL, fit: false}
+    conductivity:  {value: 9.0, units: "W/(m K)", plausible_range: [6.0, 12.0], source: MATERIAL, fit: false}
+    resistivity:   {value: 1.4e-6, units: "ohm m", source: MATERIAL, fit: false}
+    demag_limit_C: {value: 120.0, units: "degC", plausible_range: [80.0, 150.0], source: MATERIAL, fit: false,
+                    note: "Grade dependent; Dy-doped grades are higher. Exceeding it is IRREVERSIBLE."}
+
+  aluminium:
+    specific_heat: {value: 900.0, units: "J/(kg K)", plausible_range: [880.0, 920.0], source: MATERIAL, fit: false}
+    density:       {value: 2700.0, units: "kg/m^3", plausible_range: [2690.0, 2810.0], source: MATERIAL, fit: false}
+    conductivity:  {value: 180.0, units: "W/(m K)", plausible_range: [150.0, 205.0], source: MATERIAL, fit: false}
+
+  slot_insulation:
+    # Liner + impregnation + entrapped air voids, treated as one effective medium
+    conductivity: {value: 0.22, units: "W/(m K)", plausible_range: [0.12, 0.35], source: ESTIMATED, fit: true,
+                   note: "NOT a clean material property: it is liner + impregnation varnish + entrapped air voids treated as one effective medium, and it depends on impregnation quality, which varies unit to unit. Classified ESTIMATED rather than MATERIAL for exactly that reason, and identified rather than looked up."}
+
+  air:
+    # at ~60 C, 1 atm
+    conductivity: {value: 0.028, units: "W/(m K)", plausible_range: [0.026, 0.030], source: MATERIAL, fit: false}
+    specific_heat: {value: 1007.0, units: "J/(kg K)", source: MATERIAL, fit: false}
+    density: {value: 1.06, units: "kg/m^3", source: MATERIAL, fit: false}
+    kinematic_viscosity: {value: 1.9e-5, units: "m^2/s", source: MATERIAL, fit: false}
+
+  water_glycol:
+    specific_heat: {value: 3600.0, units: "J/(kg K)", plausible_range: [3400.0, 4180.0], source: MATERIAL, fit: false}
+    density: {value: 1050.0, units: "kg/m^3", plausible_range: [1000.0, 1080.0], source: MATERIAL, fit: false}
+    conductivity: {value: 0.42, units: "W/(m K)", plausible_range: [0.38, 0.60], source: MATERIAL, fit: false}
+    dynamic_viscosity: {value: 2.0e-3, units: "Pa s", plausible_range: [1.0e-3, 4.0e-3], source: MATERIAL, fit: false}
+
+# -----------------------------------------------------------------------------
+# Geometry — ASSUMED at the stated machine scale.
+# Documented so every derived R and C is reproducible. Not measured.
+# -----------------------------------------------------------------------------
+geometry:
+  source: ESTIMATED
+  note: "Representative of a ~52 kW water-cooled PMSM. Not the actual Paderborn machine's drawings, which are not published. Derived quantities inherit this uncertainty, which is why the resistances are fitted."
+  stator_outer_radius_m:   {value: 0.105, plausible_range: [0.090, 0.125]}
+  stator_inner_radius_m:   {value: 0.065, plausible_range: [0.055, 0.080]}
+  rotor_outer_radius_m:    {value: 0.0635, plausible_range: [0.0535, 0.0785]}
+  air_gap_m:               {value: 0.0015, plausible_range: [0.0008, 0.0025]}
+  active_length_m:         {value: 0.150, plausible_range: [0.100, 0.220]}
+  housing_outer_radius_m:  {value: 0.120, plausible_range: [0.105, 0.145]}
+  slot_liner_thickness_m:  {value: 0.0003, plausible_range: [0.0002, 0.0005]}
+  slot_count:              {value: 36, plausible_range: [24, 48]}
+  copper_mass_kg:          {value: 3.6, plausible_range: [2.0, 6.0]}
+  steel_mass_kg:           {value: 12.0, plausible_range: [7.0, 20.0]}
+  magnet_mass_kg:          {value: 1.1, plausible_range: [0.6, 2.0]}
+  rotor_iron_mass_kg:      {value: 5.5, plausible_range: [3.0, 9.0]}
+  housing_mass_kg:         {value: 8.0, plausible_range: [5.0, 14.0]}
+  coolant_channel_hydraulic_diameter_m: {value: 0.010, plausible_range: [0.006, 0.016]}
+  coolant_wetted_area_m2:  {value: 0.085, plausible_range: [0.050, 0.130]}
+  housing_outer_area_m2:   {value: 0.16, plausible_range: [0.10, 0.26]}
+
+# -----------------------------------------------------------------------------
+# Thermal capacitances  C = m * c_p
+# Computed from geometry x materials by src/params.py — these are the resulting
+# nominal values, recorded here for traceability and range-checked at load.
+# NOT fitted: mass and specific heat are knowable.
+# -----------------------------------------------------------------------------
+capacitances:
+  winding:
+    value: 1386.0
+    units: "J/K"
+    source: GEOMETRY
+    formula: "C = m_copper * c_p_copper = 3.6 * 385"
+    plausible_range: [760.0, 2340.0]
+    sampling: uniform
+    fit: false
+  yoke:
+    value: 5520.0
+    units: "J/K"
+    source: GEOMETRY
+    formula: "C = m_steel * c_p_steel = 12.0 * 460"
+    plausible_range: [3080.0, 9800.0]
+    sampling: uniform
+    fit: false
+  magnet:
+    value: 3014.0
+    units: "J/K"
+    source: GEOMETRY
+    formula: "C = m_magnet*c_p_NdFeB + m_rotor_iron*c_p_steel = 1.1*440 + 5.5*460"
+    plausible_range: [1644.0, 5020.0]
+    sampling: uniform
+    fit: false
+  housing:
+    value: 7200.0
+    units: "J/K"
+    source: GEOMETRY
+    formula: "C = m_alu * c_p_alu = 8.0 * 900"
+    plausible_range: [4400.0, 12880.0]
+    sampling: uniform
+    fit: false
+
+# -----------------------------------------------------------------------------
+# Thermal resistances
+# Sampled log-uniform: they span decades and a linear prior would concentrate
+# almost all mass at the high end.
+# HARD BOUND: every resistance must stay > 0. A negative resistance transports
+# heat up a gradient and violates the second law — this is a physical constraint,
+# not a regularisation choice.
+# -----------------------------------------------------------------------------
+resistances:
+  winding_to_yoke:
+    value: 0.025
+    units: "K/W"
+    source: GEOMETRY
+    formula: "R = t_liner / (k_ins * A_slot_wall), A from slot_count x perimeter x active_length"
+    plausible_range: [0.008, 0.120]
+    sampling: loguniform
+    fit: true
+    note: "The dominant conduction resistance in the machine and the least reliably known. See PHYSICS.md section 3.1. Prior rescaled from an original 0.18 K/W geometric guess after the measured data showed the chain was ~17x too resistive - see the DATA_PRIOR note on housing_to_coolant."
+
+  yoke_to_housing:
+    value: 0.010
+    units: "K/W"
+    source: ESTIMATED
+    formula: "iron conduction in series with a core-to-frame interface gap of 0.01-0.08 mm equivalent air"
+    plausible_range: [0.003, 0.050]
+    sampling: loguniform
+    fit: true
+    note: "Interface/contact resistance is assembly-dependent and effectively impossible to predict a priori. Boglietti et al. 2009."
+
+  magnet_to_winding_airgap:
+    value: 1.20
+    units: "K/W"
+    source: CORRELATION
+    formula: "R = delta / (k_eff(Ta) * A_gap); k_eff/k_air = f(Taylor number)"
+    plausible_range: [0.35, 4.00]
+    sampling: loguniform
+    fit: true
+    speed_dependent: true
+    note: "SPEED DEPENDENT — evaluated as a function, this value is the static (zero-speed) case. See PHYSICS.md section 3.4."
+
+  magnet_to_housing_shaft:
+    value: 2.20
+    units: "K/W"
+    source: ESTIMATED
+    formula: "shaft conduction in series with bearing contact"
+    plausible_range: [0.80, 6.00]
+    sampling: loguniform
+    fit: true
+    note: "With the air gap, one of only two paths out of the rotor. Poorly known, and the rotor is the node with an irreversible failure limit."
+
+  housing_to_coolant:
+    value: 0.007
+    units: "K/W"
+    source: CORRELATION
+    formula: "R = 1/(h*A); h from Dittus-Boelter Nu = 0.023 Re^0.8 Pr^0.4"
+    plausible_range: [0.002, 0.030]
+    sampling: loguniform
+    fit: true
+    flow_dependent: true
+    source_note_override: DATA_PRIOR
+    note: |
+      FLOW DEPENDENT - evaluated as a function of mass flow; this is the
+      nominal-flow case.
+      The three series resistances winding->yoke->housing->coolant were rescaled
+      from geometric guesses (0.18/0.055/0.014, sum 0.249 K/W) to sum ~0.042 K/W.
+      Reason: regressing measured quasi-steady (T_winding - T_coolant) on i^2
+      over the FIT PROFILES ONLY gives 1.5*R20*R_eff = 1.266e-3 K/A^2. With a
+      plausible R20 = 0.020 ohm that fixes R_eff = 0.042 K/W. The original chain
+      predicted a 502 degC winding where the data never exceeds 141 degC.
+      NOTE: R20 and R_eff are NOT separately identifiable from steady-state data
+      - only their PRODUCT is. Breaking that degeneracy needs transients, which
+      carry the capacitances. Step 6 must therefore fit on transient segments,
+      not on steady points.
+
+  housing_to_ambient:
+    value: 0.55
+    units: "K/W"
+    source: CORRELATION
+    formula: "R = 1/((h_conv + h_rad) * A_outer); h_rad linearised per PHYSICS.md 3.3"
+    plausible_range: [0.20, 1.60]
+    sampling: loguniform
+    fit: true
+    note: "Small contribution next to the water jacket, but not zero."
+
+# -----------------------------------------------------------------------------
+# Loss model coefficients
+# -----------------------------------------------------------------------------
+losses:
+  copper:
+    phase_resistance_20C:
+      value: 0.020
+      units: "ohm"
+      source: ESTIMATED
+      plausible_range: [0.008, 0.060]
+      sampling: loguniform
+      fit: true
+      note: "Per phase. Combined with alpha_copper this sets the whole positive-feedback loop. Only the PRODUCT R20*R_eff is identifiable from steady-state data; see housing_to_coolant."
+    dq_to_three_phase_factor:
+      value: 1.5
+      units: "-"
+      source: PHYSICAL
+      fit: false
+      note: "P = (3/2) R (i_d^2 + i_q^2) for PEAK dq amplitudes. Getting this wrong is a silent 33% error."
+    ac_excess_coefficient:
+      value: 0.0
+      units: "-"
+      source: ESTIMATED
+      plausible_range: [0.0, 0.4]
+      sampling: uniform
+      fit: true
+      note: "UNSOURCED — conductor geometry unavailable. Defaults to zero (DC only) so it cannot silently inflate results; enabled only if identification supports it."
+
+  iron:
+    # Steinmetz. Expressed per unit core mass at reference conditions.
+    hysteresis_coefficient:
+      value: 0.020
+      units: "W/(kg Hz T^n)"
+      source: ESTIMATED
+      plausible_range: [0.008, 0.050]
+      sampling: loguniform
+      fit: true
+    eddy_coefficient:
+      value: 6.0e-5
+      units: "W/(kg Hz^2 T^2)"
+      source: ESTIMATED
+      plausible_range: [2.0e-5, 2.0e-4]
+      sampling: loguniform
+      fit: true
+    steinmetz_exponent:
+      value: 1.8
+      units: "-"
+      plausible_range: [1.6, 2.2]
+      sampling: uniform
+      source: MATERIAL
+      fit: false
+      note: "Bounded by the physics of the B-H loop; not a free knob."
+    flux_density_T:
+      value: 1.2
+      units: "T"
+      plausible_range: [0.9, 1.5]
+      sampling: uniform
+      source: ESTIMATED
+      fit: false
+      note: "Approximately fixed by the magnets below base speed. Field weakening above base speed is NOT modelled — flagged in REPORT.md."
+
+  magnet_eddy:
+    coefficient:
+      value: 4.0e-6
+      units: "W/(kg Hz^2 T^2)"
+      source: ESTIMATED
+      plausible_range: [1.0e-6, 2.0e-5]
+      sampling: loguniform
+      fit: true
+      note: "Driven by slotting/MMF/PWM harmonics, not the fundamental. Small in absolute terms, disproportionate in consequence."
+
+  mechanical:
+    bearing_friction_torque:
+      value: 0.10
+      units: "N m"
+      source: ESTIMATED
+      plausible_range: [0.03, 0.35]
+      sampling: loguniform
+      fit: true
+    windage_coefficient:
+      value: 1.5e-7
+      units: "W/(rad/s)^3"
+      source: ESTIMATED
+      plausible_range: [3.0e-8, 8.0e-7]
+      sampling: loguniform
+      fit: true
+      note: "Cubic in speed — negligible low, can dominate high."
+
+# -----------------------------------------------------------------------------
+# Boundary conditions and operating envelope for domain randomisation
+# -----------------------------------------------------------------------------
+operating:
+  ambient_C:            {value: 25.0, plausible_range: [10.0, 45.0], sampling: uniform}
+  coolant_inlet_C:      {value: 35.0, plausible_range: [15.0, 60.0], sampling: uniform}
+  coolant_flow_kg_s:    {value: 0.12, plausible_range: [0.02, 0.30], sampling: loguniform,
+                         note: "Lower bound represents a degraded pump — the regime a cooling design most needs to survive."}
+  nominal_flow_kg_s:    {value: 0.12, note: "Reference flow at which housing_to_coolant takes its nominal value."}
+  nominal_speed_rad_s:  {value: 300.0, note: "Reference speed for the air-gap resistance function."}
+
+limits:
+  winding_insulation_C: {value: 155.0, source: MATERIAL, note: "Class F. Exceeding shortens life; ~10 K over halves it."}
+  magnet_demag_C:       {value: 120.0, source: MATERIAL, note: "IRREVERSIBLE. See materials.ndfeb.demag_limit_C."}
+  model_validity_C:     {value: 250.0, source: ESTIMATED, note: "Above this a 4-node lumped model with linearised radiation is not meaningful."}

@@ -8,3 +8,7 @@ data/processed/
 *.pt
 runs/
 .venv/
+kaggle.json
+*.token
+.env
+secrets/
