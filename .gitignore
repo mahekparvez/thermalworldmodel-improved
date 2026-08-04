@@ -15,3 +15,5 @@ secrets/
 
 .venv/
 params/tnn.pt
+
+.claude/

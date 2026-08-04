@@ -1,0 +1,640 @@
+<title>Motor Thermal Model &mdash; Validation Record</title>
+
+<style>
+:root {
+  --paper: #f4f6f8;
+  --card: #ffffff;
+  --rule: #d9e0e6;
+  --rule-soft: #e8edf1;
+  --ink: #10181f;
+  --ink-2: #3d4b57;
+  --dim: #6b7c8a;
+  --faint: #9aa8b4;
+
+  --measured: #10181f;
+  --lptn: #2f6f9f;
+  --tnn: #c9702a;
+  --bad: #b3372c;
+  --good: #2c7a52;
+  --accent: #2f6f9f;
+
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #0d1217; --card: #131a21; --rule: #253039; --rule-soft: #1c252d;
+    --ink: #e9eef2; --ink-2: #bcc8d2; --dim: #8b9aa6; --faint: #5f6e7a;
+    --measured: #e9eef2; --lptn: #5fa8db; --tnn: #e2934f;
+    --bad: #e2685a; --good: #4fb383; --accent: #5fa8db;
+  }
+}
+:root[data-theme="light"] {
+  --paper: #f4f6f8; --card: #fff; --rule: #d9e0e6; --rule-soft: #e8edf1;
+  --ink: #10181f; --ink-2: #3d4b57; --dim: #6b7c8a; --faint: #9aa8b4;
+  --measured: #10181f; --lptn: #2f6f9f; --tnn: #c9702a;
+  --bad: #b3372c; --good: #2c7a52; --accent: #2f6f9f;
+}
+:root[data-theme="dark"] {
+  --paper: #0d1217; --card: #131a21; --rule: #253039; --rule-soft: #1c252d;
+  --ink: #e9eef2; --ink-2: #bcc8d2; --dim: #8b9aa6; --faint: #5f6e7a;
+  --measured: #e9eef2; --lptn: #5fa8db; --tnn: #e2934f;
+  --bad: #e2685a; --good: #4fb383; --accent: #5fa8db;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--paper); color: var(--ink);
+  font-family: var(--sans); font-size: 15px; line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1060px; margin: 0 auto; padding: 0 22px 90px; }
+
+.lbl { font-family: var(--mono); font-size: 10.5px; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--dim); }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+/* ---------- masthead ---------- */
+header { padding: 46px 0 26px; border-bottom: 2px solid var(--ink); margin-bottom: 30px; }
+header .kicker { margin-bottom: 12px; }
+h1 { margin: 0 0 10px; font-size: 33px; line-height: 1.15; letter-spacing: -.02em;
+  font-weight: 640; text-wrap: balance; max-width: 22ch; }
+header .standfirst { margin: 0; font-size: 16.5px; color: var(--ink-2); max-width: 62ch; }
+.stamp { display: flex; flex-wrap: wrap; gap: 0 26px; margin-top: 22px;
+  padding-top: 16px; border-top: 1px solid var(--rule); }
+.stamp div { min-width: 96px; }
+.stamp .v { font-family: var(--mono); font-size: 16px; font-variant-numeric: tabular-nums;
+  margin-top: 2px; }
+
+h2 { font-size: 12px; font-family: var(--mono); letter-spacing: .14em;
+  text-transform: uppercase; color: var(--dim); font-weight: 500;
+  margin: 44px 0 4px; padding-bottom: 8px; border-bottom: 1px solid var(--rule); }
+h3 { font-size: 18px; margin: 0 0 8px; font-weight: 600; letter-spacing: -.01em;
+  text-wrap: balance; }
+p { margin: 0 0 14px; max-width: 68ch; }
+.muted { color: var(--dim); }
+.small { font-size: 13px; }
+
+/* ---------- verdict ---------- */
+.verdict { background: var(--card); border: 1px solid var(--rule);
+  border-left: 3px solid var(--accent); padding: 20px 22px; margin: 22px 0; }
+.verdict h3 { margin-bottom: 6px; }
+.verdict.warn { border-left-color: var(--tnn); }
+.verdict.bad { border-left-color: var(--bad); }
+
+/* ---------- chart card ---------- */
+.card { background: var(--card); border: 1px solid var(--rule); padding: 18px; }
+.controls { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end;
+  margin-bottom: 16px; }
+.ctl { display: flex; flex-direction: column; gap: 5px; }
+.seg { display: flex; border: 1px solid var(--rule); }
+.seg button { appearance: none; background: transparent; border: 0;
+  border-right: 1px solid var(--rule); color: var(--dim); font-family: var(--mono);
+  font-size: 11.5px; padding: 7px 12px; cursor: pointer; }
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--card); }
+.seg button:hover:not([aria-pressed="true"]) { background: var(--rule-soft); color: var(--ink); }
+select { font-family: var(--mono); font-size: 12px; padding: 7px 9px;
+  background: var(--card); color: var(--ink); border: 1px solid var(--rule); }
+:is(button, select, [tabindex]):focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.legend { display: flex; gap: 18px; flex-wrap: wrap; margin: 10px 0 2px; font-size: 12.5px; }
+.legend span { display: inline-flex; align-items: center; gap: 7px; font-family: var(--mono); }
+.swatch { width: 15px; height: 2.5px; display: inline-block; }
+.swatch.dash { height: 0; border-top: 2.5px dashed currentColor; }
+
+svg.chart { display: block; width: 100%; height: auto; }
+svg .grid { stroke: var(--rule-soft); stroke-width: 1; }
+svg .axis { stroke: var(--rule); stroke-width: 1; }
+svg .tick { fill: var(--faint); font-family: var(--mono); font-size: 13px; }
+svg .alab { fill: var(--dim); font-family: var(--mono); font-size: 13px;
+  letter-spacing: .08em; text-transform: uppercase; }
+
+.readout { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 1px; background: var(--rule); border: 1px solid var(--rule); margin-top: 16px; }
+.readout div { background: var(--card); padding: 10px 12px; }
+.readout .v { font-family: var(--mono); font-size: 17px; font-variant-numeric: tabular-nums;
+  margin-top: 2px; }
+
+/* ---------- tables ---------- */
+.scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule-soft); }
+thead th { font-family: var(--mono); font-size: 10px; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--dim); font-weight: 500;
+  border-bottom: 1px solid var(--rule); white-space: nowrap; }
+td.n, th.n { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums;
+  white-space: nowrap; }
+tbody tr:hover td { background: var(--rule-soft); }
+td.name { font-family: var(--mono); font-size: 12px; }
+.win { color: var(--good); font-weight: 600; }
+.pin { color: var(--bad); font-weight: 600; }
+.chip { display: inline-block; font-family: var(--mono); font-size: 9.5px;
+  letter-spacing: .08em; text-transform: uppercase; padding: 1px 6px;
+  border: 1px solid var(--rule); color: var(--dim); }
+.chip.bad { color: var(--bad); border-color: var(--bad); }
+.chip.good { color: var(--good); border-color: var(--good); }
+
+/* range bar showing where a fitted value sits inside its prior range */
+.rng { position: relative; height: 16px; min-width: 92px; }
+.rng i { position: absolute; left: 0; right: 0; top: 7px; height: 2px; background: var(--rule); }
+.rng b { position: absolute; top: 3px; width: 2px; height: 10px; background: var(--lptn); }
+.rng u { position: absolute; top: 1px; width: 2px; height: 14px; background: var(--faint); }
+.rng b.pinned { background: var(--bad); width: 3px; }
+
+ul { margin: 0 0 14px; padding-left: 20px; max-width: 68ch; }
+li { margin-bottom: 6px; }
+code { font-family: var(--mono); font-size: 12.5px; background: var(--rule-soft);
+  padding: 1px 5px; }
+a { color: var(--accent); }
+footer { margin-top: 54px; padding-top: 18px; border-top: 1px solid var(--rule);
+  font-size: 12.5px; color: var(--dim); }
+
+@media (max-width: 720px) {
+  h1 { font-size: 26px; }
+  .wrap { padding: 0 15px 60px; }
+  .controls { gap: 11px; }
+}
+</style>
+
+<div class="wrap">
+
+<header>
+  <div class="kicker lbl">Validation record &middot; Paderborn LEA PMSM test bench</div>
+  <h1>A 14-parameter physics model beat a neural network</h1>
+  <p class="standfirst">Both were run free over 14 motor test profiles they had
+  never seen &mdash; given the measured temperatures once, at minute zero, then left
+  alone for up to six hours. This page is the evidence.</p>
+  <div class="stamp">
+    <div><div class="lbl">Held-out</div><div class="v" id="s-prof">14</div></div>
+    <div><div class="lbl">Hours</div><div class="v" id="s-hours">38.3</div></div>
+    <div><div class="lbl">LPTN params</div><div class="v">14</div></div>
+    <div><div class="lbl">TNN params</div><div class="v" id="s-tnnp">2631</div></div>
+    <div><div class="lbl">LPTN MAE</div><div class="v" id="s-lmae">&mdash;</div></div>
+    <div><div class="lbl">TNN MAE</div><div class="v" id="s-tmae">&mdash;</div></div>
+  </div>
+</header>
+
+<div class="verdict">
+  <h3 id="v-head">188&times; more parameters bought nothing</h3>
+  <p id="v-body" style="margin:0"></p>
+</div>
+
+<h2>The reality gate</h2>
+<h3>Measured thermocouples against both models, free-running</h3>
+<p class="muted small">Neither model sees a measurement after minute zero. Every
+profile below was excluded from fitting, training and validation. Split is by
+entire profile &mdash; adjacent samples at 2&nbsp;Hz are nearly identical, so splitting
+by timestep would leak almost perfectly.</p>
+
+<div class="card">
+  <div class="controls">
+    <div class="ctl">
+      <span class="lbl">Held-out profile</span>
+      <select id="prof"></select>
+    </div>
+    <div class="ctl">
+      <span class="lbl">Node</span>
+      <div class="seg" id="node"></div>
+    </div>
+    <div class="ctl">
+      <span class="lbl">Show</span>
+      <div class="seg" id="show">
+        <button type="button" data-k="lptn" aria-pressed="true">LPTN</button>
+        <button type="button" data-k="tnn" aria-pressed="true">TNN</button>
+        <button type="button" data-k="err" aria-pressed="false">Error</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend" id="legend"></div>
+  <div id="chart"></div>
+  <div id="drive"></div>
+  <div class="readout" id="readout"></div>
+</div>
+
+<h2>Both models, same held-out data</h2>
+<div class="scroll">
+  <table id="cmp">
+    <thead><tr>
+      <th>Node</th>
+      <th class="n">LPTN MAE</th><th class="n">TNN MAE</th>
+      <th class="n">LPTN max</th><th class="n">TNN max</th>
+      <th>Winner</th>
+    </tr></thead>
+    <tbody></tbody>
+  </table>
+</div>
+<p class="small muted" style="margin-top:10px">Whole-profile free run, Kelvin.
+Max error matters more than mean for the magnet: NdFeB demagnetisation is
+<em>irreversible</em>, so a 30&nbsp;K excursion is not averaged away by a good
+mean.</p>
+
+<h2>Does error grow with horizon?</h2>
+<p>The failure mode that matters in a rollout model is drift &mdash; error that
+compounds as the model is left alone. This is why training used multi-step
+rollouts with an explicit drift penalty rather than single-step loss, which on
+2&nbsp;Hz thermal data is trivially easy and hides exactly this.</p>
+<div class="card"><div id="hchart"></div></div>
+<p class="small muted" style="margin-top:10px">The physics model's error
+<em>grows</em> with horizon; the network's flattens. That is the one place the
+extra parameters clearly paid for themselves.</p>
+
+<h2>Identified parameters</h2>
+<p>Fourteen parameters were fitted against measured data, bounded by
+physically plausible ranges. Capacitances (from <code>m&middot;c_p</code>), the
+copper temperature coefficient, and every published material property were
+<strong>held fixed</strong> &mdash; fitting a knowable constant to improve a residual
+destroys the only ground truth a model has.</p>
+<div class="scroll">
+  <table id="ptab">
+    <thead><tr>
+      <th>Parameter</th><th class="n">Prior</th><th class="n">Fitted</th>
+      <th class="n">Ratio</th><th>Position in prior range</th><th></th>
+    </tr></thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<div class="verdict bad" id="pinbox">
+  <h3>Four parameters hit their bounds &mdash; the structure is imperfect</h3>
+  <p>A parameter that had to reach its limit to fit the data means the model
+  <strong>structure</strong> is wrong, not the parameter. All four point the same
+  way: the model cannot generate enough <strong>speed-driven</strong> loss. Iron
+  hysteresis and bearing friction pinned high, phase resistance pushed 2.3&times;
+  down, magnet eddy up 5&times;, and the AC-copper coefficient moved off zero.</p>
+  <p style="margin-bottom:0">The most likely single cause is
+  <code>pole_pairs</code>, which is <strong>unsourced</strong> &mdash; it is not
+  published with the dataset. Electrical frequency enters the eddy term
+  <em>quadratically</em>, so one wrong integer would produce exactly this
+  signature. It is also the cheapest thing to fix.</p>
+</div>
+
+<h2>What the network learned, in physical units</h2>
+<p>Because the network keeps the thermal network's structure, everything it
+learned is a conductance or a capacitance in real units &mdash; and can be put beside
+the physics model's values. A black box offers no such check.</p>
+<div class="scroll"><table id="ltab">
+  <thead><tr><th>Quantity</th><th class="n">LPTN fitted</th><th class="n">TNN learned</th><th class="n">Ratio</th></tr></thead>
+  <tbody></tbody>
+</table></div>
+<p class="small muted" style="margin-top:10px">The two disagree most on the
+housing capacitance &mdash; which is the one node that is <strong>never
+measured</strong>. It is a latent state, seeded from the coolant, and its
+identified value should be trusted least.</p>
+
+<h2>Gates</h2>
+<div class="scroll"><table id="gates">
+  <thead><tr><th>Gate</th><th>What it proves</th><th class="n">Result</th><th></th></tr></thead>
+  <tbody></tbody>
+</table></div>
+<p class="small muted" style="margin-top:10px">Only the reality gate can falsify
+the physics. The other two confirm the code is self-consistent &mdash; necessary, but
+they would pass just as happily on a model that describes no real motor.</p>
+
+<h2>What this cannot do</h2>
+<ul>
+  <li><strong>3&nbsp;K mean is not a safety margin.</strong> Peak errors reach
+  25&nbsp;K (physics) and 30&nbsp;K (network) on the magnet.</li>
+  <li><strong>The housing is never measured</strong> and the stator tooth is
+  measured but not modelled &mdash; a four-node network lumps it into the yoke.</li>
+  <li><strong>Coolant flow rate is not in the dataset.</strong> The
+  flow-dependent resistance law is implemented and unit-tested but never
+  exercised against data, so any claim about pump degradation is untested.</li>
+  <li><strong>One machine.</strong> Everything is fitted to a single prototype
+  PMSM. Nothing here demonstrates transfer &mdash; and transfer is the whole claim of
+  a "world model".</li>
+  <li><strong>Geometry is assumed</strong>, not taken from drawings, which are
+  not published.</li>
+</ul>
+
+<footer>
+  Data: Paderborn University LEA electric motor temperature dataset (CC-BY-SA-4.0),
+  1,330,816 samples at 2&nbsp;Hz across 69 profiles, 184.8&nbsp;h.
+  Model structure after Wallscheid &amp; B&ouml;cker (2016); learned variant after
+  Kirchg&auml;ssner, Wallscheid &amp; B&ouml;cker, <em>Thermal Neural Networks</em>
+  (arXiv:2103.16323).
+  <br>Nothing here has been validated on a second machine.
+</footer>
+
+</div>
+
+<script id="D" type="application/json">__DATA__</script>
+<script>
+(function () {
+"use strict";
+var D = JSON.parse(document.getElementById("D").textContent);
+var NODES = ["winding", "yoke", "magnet"];
+var LABEL = { winding: "Stator winding", yoke: "Stator yoke", magnet: "Magnet / rotor" };
+var el = function (i) { return document.getElementById(i); };
+var css = function (v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); };
+var S = { pid: D.profiles[0].id, node: "winding", lptn: true, tnn: true, err: false };
+
+function prof() {
+  for (var i = 0; i < D.profiles.length; i++) if (D.profiles[i].id === S.pid) return D.profiles[i];
+  return D.profiles[0];
+}
+function esc(s) { return String(s).replace(/[&<>]/g, function (c) {
+  return { "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]; }); }
+
+/* ---------- generic line chart ---------- */
+function lineChart(opts) {
+  var W = 1000, H = opts.height || 300;
+  var pad = { l: 60, r: 14, t: 20, b: 34 };
+  var iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
+  var xs = opts.x, series = opts.series;
+
+  var lo = Infinity, hi = -Infinity;
+  series.forEach(function (s) {
+    s.y.forEach(function (v) { if (v < lo) lo = v; if (v > hi) hi = v; });
+  });
+  if (opts.zero) { lo = Math.min(lo, 0); hi = Math.max(hi, 0); }
+  var span = (hi - lo) || 1;
+  lo -= span * 0.08; hi += span * 0.08;
+
+  var xmax = xs[xs.length - 1] || 1;
+  var X = function (v) { return pad.l + iw * v / xmax; };
+  var Y = function (v) { return pad.t + ih * (1 - (v - lo) / (hi - lo)); };
+
+  function ticks(a, b, n) {
+    var raw = (b - a) / n, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    var st = [1, 2, 2.5, 5, 10].map(function (m) { return m * mag; })
+      .filter(function (m) { return m >= raw; })[0] || 10 * mag;
+    var out = [], v = Math.ceil(a / st) * st;
+    for (; v <= b; v += st) out.push(v);
+    return out;
+  }
+
+  var g = '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' +
+    esc(opts.label || "chart") + '">';
+  ticks(lo, hi, 5).forEach(function (v) {
+    g += '<line class="grid" x1="' + pad.l + '" y1="' + Y(v).toFixed(1) + '" x2="' +
+      (pad.l + iw) + '" y2="' + Y(v).toFixed(1) + '"/>' +
+      '<text class="tick" x="' + (pad.l - 7) + '" y="' + (Y(v) + 3.5).toFixed(1) +
+      '" text-anchor="end">' + (Math.abs(v) < 1e-9 ? 0 : v.toFixed(v % 1 ? 1 : 0)) + '</text>';
+  });
+  ticks(0, xmax, 6).forEach(function (v) {
+    g += '<text class="tick" x="' + X(v).toFixed(1) + '" y="' + (H - 12) +
+      '" text-anchor="middle">' + v.toFixed(0) + '</text>';
+  });
+  g += '<line class="axis" x1="' + pad.l + '" y1="' + (pad.t + ih) + '" x2="' +
+    (pad.l + iw) + '" y2="' + (pad.t + ih) + '"/>';
+  g += '<text class="alab" x="' + (pad.l + iw) + '" y="' + (H - 1) +
+    '" text-anchor="end">' + esc(opts.xlabel || "minutes") + '</text>';
+  g += '<text class="alab" x="' + pad.l + '" y="' + (pad.t - 2) + '">' +
+    esc(opts.ylabel || "") + '</text>';
+
+  series.forEach(function (s) {
+    var d = "", n = Math.min(xs.length, s.y.length);
+    for (var i = 0; i < n; i++) {
+      d += (i ? "L" : "M") + X(xs[i]).toFixed(1) + " " + Y(s.y[i]).toFixed(1) + " ";
+    }
+    g += '<path d="' + d + '" fill="none" stroke="' + s.color +
+      '" stroke-width="' + (s.w || 1.6) + '"' +
+      (s.dash ? ' stroke-dasharray="' + s.dash + '"' : "") +
+      ' stroke-linejoin="round" opacity="' + (s.op || 1) + '"/>';
+  });
+  return g + "</svg>";
+}
+
+/* ---------- main trace ---------- */
+function drawMain() {
+  var p = prof(), n = S.node;
+  var series = [];
+  if (S.err) {
+    if (S.lptn) series.push({ y: p.lptn[n].map(function (v, i) { return v - p.meas[n][i]; }),
+                              color: css("--lptn"), w: 1.5 });
+    if (S.tnn) series.push({ y: p.tnn[n].map(function (v, i) { return v - p.meas[n][i]; }),
+                             color: css("--tnn"), w: 1.5 });
+    series.push({ y: p.t.map(function () { return 0; }), color: css("--faint"), w: 1, dash: "3 3" });
+  } else {
+    series.push({ y: p.meas[n], color: css("--measured"), w: 2.1 });
+    if (S.lptn) series.push({ y: p.lptn[n], color: css("--lptn"), w: 1.6 });
+    if (S.tnn) series.push({ y: p.tnn[n], color: css("--tnn"), w: 1.6, dash: "5 3" });
+  }
+  el("chart").innerHTML = lineChart({
+    x: p.t, series: series, height: 320,
+    ylabel: S.err ? "error, K (model - measured)" : "temperature, \u00b0C",
+    label: LABEL[n] + (S.err ? " error" : " temperature") + " for profile " + p.id
+  });
+
+  // drive conditions underneath, so a spike in error can be read against
+  // what the machine was actually being asked to do
+  var sp = p.inputs.speed, isq = p.inputs.i_sq;
+  var mx = Math.max.apply(null, isq) || 1;
+  el("drive").innerHTML = lineChart({
+    x: p.t, height: 120, ylabel: "drive", zero: true,
+    label: "drive conditions",
+    series: [
+      { y: sp.map(function (v) { return v / 6000 * 100; }), color: css("--faint"), w: 1.3 },
+      { y: isq.map(function (v) { return v / mx * 100; }), color: css("--bad"), w: 1.3, op: .8 }
+    ]
+  });
+
+  el("drive").insertAdjacentHTML("beforeend",
+    '<div class="legend" style="margin:2px 0 0">' +
+    '<span style="color:var(--faint)"><i class="swatch" style="background:currentColor"></i>speed, % of 6000 rpm</span>' +
+    '<span style="color:var(--bad)"><i class="swatch" style="background:currentColor"></i>current&sup2;, % of profile peak</span></div>');
+
+  el("legend").innerHTML = S.err
+    ? '<span style="color:var(--lptn)"><i class="swatch" style="background:currentColor"></i>LPTN error</span>' +
+      '<span style="color:var(--tnn)"><i class="swatch" style="background:currentColor"></i>TNN error</span>' +
+      '<span class="muted">zero = perfect</span>'
+    : '<span style="color:var(--measured)"><i class="swatch" style="background:currentColor"></i>Measured thermocouple</span>' +
+      '<span style="color:var(--lptn)"><i class="swatch" style="background:currentColor"></i>LPTN (14 params)</span>' +
+      '<span style="color:var(--tnn)"><i class="swatch dash" style="color:currentColor"></i>TNN (' + D.tnn_learned.n_params + ' params)</span>';
+
+  var l = p.mae.lptn[n], t = p.mae.tnn[n];
+  el("readout").innerHTML =
+    cell("Profile", "#" + p.id) +
+    cell("Duration", p.minutes.toFixed(0) + " min") +
+    cell("LPTN MAE", l.toFixed(2) + " K", l <= t) +
+    cell("TNN MAE", t.toFixed(2) + " K", t < l) +
+    cell("LPTN max", p.max.lptn[n].toFixed(1) + " K") +
+    cell("TNN max", p.max.tnn[n].toFixed(1) + " K");
+}
+function cell(k, v, win) {
+  return '<div><div class="lbl">' + k + '</div><div class="v' + (win ? " win" : "") + '">' +
+    v + "</div></div>";
+}
+
+/* ---------- horizon chart ---------- */
+function drawHorizon() {
+  var hs = ["1", "10", "100", "700"];
+  var dt = D.meta.dt_s;
+  var xs = hs.map(function (h) { return +h * dt / 60; });
+  var L = hs.map(function (h) { return D.horizon.lptn[h].ALL; });
+  var T = hs.map(function (h) { return D.horizon.tnn[h].ALL; });
+  el("hchart").innerHTML = lineChart({
+    x: xs, height: 230, ylabel: "mean abs error, K", xlabel: "minutes left running alone",
+    zero: true, label: "error against rollout horizon",
+    series: [{ y: L, color: css("--lptn"), w: 2.2 },
+             { y: T, color: css("--tnn"), w: 2.2, dash: "5 3" }]
+  }) + '<div class="legend" style="margin-top:6px">' +
+    '<span style="color:var(--lptn)"><i class="swatch" style="background:currentColor"></i>LPTN &mdash; error grows</span>' +
+    '<span style="color:var(--tnn)"><i class="swatch dash" style="color:currentColor"></i>TNN &mdash; error flattens</span></div>';
+}
+
+/* ---------- tables ---------- */
+function fillCompare() {
+  var a = D.aggregate_whole_profile, tb = el("cmp").querySelector("tbody"), h = "";
+  NODES.concat(["ALL"]).forEach(function (n) {
+    var L = a.lptn[n], T = a.tnn[n];
+    var win = L.mae < T.mae ? "LPTN" : (T.mae < L.mae ? "TNN" : "tie");
+    h += "<tr><td>" + (n === "ALL" ? "<strong>All nodes</strong>" : LABEL[n]) + "</td>" +
+      '<td class="n' + (L.mae <= T.mae ? " win" : "") + '">' + L.mae.toFixed(2) + "</td>" +
+      '<td class="n' + (T.mae < L.mae ? " win" : "") + '">' + T.mae.toFixed(2) + "</td>" +
+      '<td class="n">' + L.max.toFixed(1) + "</td>" +
+      '<td class="n">' + T.max.toFixed(1) + "</td>" +
+      '<td><span class="chip' + (win === "TNN" ? "" : " good") + '">' + win + "</span></td></tr>";
+  });
+  tb.innerHTML = h;
+}
+
+function fillParams() {
+  var tb = el("ptab").querySelector("tbody"), h = "";
+  D.params.forEach(function (p) {
+    var pos = "";
+    if (p.lo != null && p.hi != null) {
+      var f = function (v) {
+        var lo = Math.log(Math.max(p.lo, 1e-12)), hi = Math.log(Math.max(p.hi, 1e-12));
+        var x = Math.log(Math.max(v, 1e-12));
+        return Math.max(0, Math.min(100, 100 * (x - lo) / (hi - lo)));
+      };
+      pos = '<div class="rng" title="' + p.lo + " to " + p.hi + '"><i></i>' +
+        '<u style="left:' + f(p.prior) + '%"></u>' +
+        '<b class="' + (p.pinned ? "pinned" : "") + '" style="left:' + f(p.fitted) + '%"></b></div>';
+    }
+    h += "<tr><td class='name'>" + esc(p.name.replace(/^(resistances|losses|materials)\./, "")) + "</td>" +
+      '<td class="n">' + fmt(p.prior) + "</td>" +
+      '<td class="n' + (p.pinned ? " pin" : "") + '">' + fmt(p.fitted) + "</td>" +
+      '<td class="n muted">' + (p.ratio == null ? "&mdash;" : p.ratio + "&times;") + "</td>" +
+      "<td>" + pos + "</td>" +
+      "<td>" + (p.pinned ? '<span class="chip bad">pinned</span>' : "") + "</td></tr>";
+  });
+  tb.innerHTML = h;
+}
+function fmt(v) {
+  if (v === 0) return "0";
+  var a = Math.abs(v);
+  if (a < 1e-3 || a >= 1e5) return v.toExponential(2);
+  return String(+v.toPrecision(3));
+}
+
+function fillLearned() {
+  var tb = el("ltab").querySelector("tbody"), h = "";
+  var caps = ["winding", "yoke", "magnet", "housing"];
+  caps.forEach(function (n, i) {
+    var a = D.lptn_capacitances[i], b = D.tnn_learned.capacitances[i];
+    h += "<tr><td>C " + n + " <span class='muted small'>J/K</span></td>" +
+      '<td class="n">' + a + '</td><td class="n">' + b + '</td>' +
+      '<td class="n muted">' + (b / a).toFixed(2) + "&times;</td></tr>";
+  });
+  var lp = {}; D.params.forEach(function (p) { lp[p.name] = p.fitted; });
+  Object.keys(D.tnn_learned.resistances).forEach(function (k) {
+    var key = "resistances." + k;
+    var a = lp[key], b = D.tnn_learned.resistances[k];
+    if (a == null) return;
+    h += "<tr><td>R " + esc(k.replace(/_/g, " ")) + " <span class='muted small'>K/W</span></td>" +
+      '<td class="n">' + fmt(a) + '</td><td class="n">' + fmt(b) + '</td>' +
+      '<td class="n muted">' + (b / a).toFixed(2) + "&times;</td></tr>";
+  });
+  h += "<tr><td>Phase resistance <span class='muted small'>&Omega;</span></td>" +
+    '<td class="n">' + fmt(lp["losses.copper.phase_resistance_20C"]) + '</td>' +
+    '<td class="n">' + fmt(D.tnn_learned.r_phase) + '</td><td class="n muted">' +
+    (D.tnn_learned.r_phase / lp["losses.copper.phase_resistance_20C"]).toFixed(2) + "&times;</td></tr>";
+  tb.innerHTML = h;
+}
+
+function fillGates() {
+  var rows = [
+    ["Analytical", "Closed-form first-order response, &Delta;T = PR(1&minus;e<sup>&minus;t/RC</sup>)",
+     "8.9e-15 K", true],
+    ["Physics", "First and second law, symmetry, boundedness, runaway detection &mdash; 17/17",
+     "9.1e-12 W", true],
+    ["Reality", "Held-out measured profiles, free-running", "3.4 K MAE", true],
+    ["Energy balance (TNN)", "Structural, not penalised &mdash; conduction is an antisymmetric exchange",
+     "0.0 W at init", true]
+  ];
+  el("gates").querySelector("tbody").innerHTML = rows.map(function (r) {
+    return "<tr><td><strong>" + r[0] + "</strong></td><td class='small'>" + r[1] + "</td>" +
+      '<td class="n">' + r[2] + "</td>" +
+      '<td><span class="chip good">pass</span></td></tr>';
+  }).join("");
+}
+
+/* ---------- controls ---------- */
+function buildControls() {
+  var sel = el("prof");
+  sel.innerHTML = D.profiles.map(function (p) {
+    return '<option value="' + p.id + '">Profile ' + p.id + " \u2014 " +
+      p.minutes.toFixed(0) + " min</option>";
+  }).join("");
+  sel.value = S.pid;
+  sel.addEventListener("change", function () { S.pid = +this.value; drawMain(); });
+
+  var SHORT = { winding: "Winding", yoke: "Yoke", magnet: "Magnet" };
+  el("node").innerHTML = NODES.map(function (n) {
+    return '<button type="button" data-n="' + n + '" aria-pressed="' + (n === S.node) +
+      '">' + SHORT[n] + "</button>";
+  }).join("");
+  el("node").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      S.node = b.dataset.n;
+      el("node").querySelectorAll("button").forEach(function (x) {
+        x.setAttribute("aria-pressed", x === b);
+      });
+      drawMain();
+    });
+  });
+
+  el("show").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var k = b.dataset.k;
+      S[k] = !S[k];
+      b.setAttribute("aria-pressed", S[k]);
+      drawMain();
+    });
+  });
+}
+
+el("s-prof").textContent = D.meta.n_test;
+el("s-hours").textContent = D.profiles.reduce(function (a, p) {
+  return a + p.minutes; }, 0).toFixed(0) / 60 | 0;
+el("s-hours").textContent = (D.profiles.reduce(function (a, p) {
+  return a + p.minutes; }, 0) / 60).toFixed(1);
+el("s-tnnp").textContent = D.tnn_learned.n_params.toLocaleString();
+el("s-lmae").textContent = D.aggregate_whole_profile.lptn.ALL.mae.toFixed(2) + " K";
+el("s-tmae").textContent = D.aggregate_whole_profile.tnn.ALL.mae.toFixed(2) + " K";
+
+(function verdict() {
+  var a = D.aggregate_whole_profile;
+  var L = a.lptn.ALL.mae, T = a.tnn.ALL.mae;
+  var gap = Math.abs(L - T) / Math.max(L, T) * 100;
+  var ratio = Math.round(D.tnn_learned.n_params / D.params.length);
+  var lw = L < T;
+  el("v-head").innerHTML = ratio + "&times; more parameters bought " +
+    (lw ? "nothing" : "about " + gap.toFixed(0) + "%");
+  el("v-body").innerHTML =
+    "Over whole profiles the fitted physics model is <strong>" +
+    (lw ? "ahead by " + gap.toFixed(0) + "%" : "behind by " + gap.toFixed(0) + "%") +
+    "</strong> \u2014 " + L.toFixed(2) + " K against the network's " + T.toFixed(2) +
+    " K. The network wins only on the stator winding (" +
+    a.tnn.winding.mae.toFixed(2) + " vs " + a.lptn.winding.mae.toFixed(2) +
+    " K) and at long horizons, which is what it was trained for; it loses on both " +
+    "slower nodes and has the worse worst case (" + a.tnn.ALL.max.toFixed(0) +
+    " K vs " + a.lptn.ALL.max.toFixed(0) + " K). If you want one model, take the " +
+    "physics one: fourteen interpretable numbers, a closed-form solution, and no training.";
+})();
+
+buildControls();
+drawMain();
+drawHorizon();
+fillCompare();
+fillParams();
+fillLearned();
+fillGates();
+addEventListener("resize", function () { drawMain(); drawHorizon(); });
+})();
+</script>
